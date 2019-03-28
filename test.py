@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import urllib3
 import csv
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 header = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
@@ -40,25 +40,38 @@ def parse_page(url):
 
     # return dct
 def parse_content(url):
-    lst = []
+    dct = {}
     session = requests.Session()
     session.max_redirects = 9999999
     url = url.strip('"')
     page = session.get(url,headers=header, verify=False)
     soup = BeautifulSoup(page.content, "html.parser")
+
+    country = soup.select("nav ol li")
+    country = [i.get_text() for i in country]
+    
+    # Event
     event = soup.select_one("div.col-12 h1").get_text()
+
+    # Starting Point
+    starting_point = country[-1]
+    # Description
+    description = soup.find("descriptions").get_text().strip()
+    # Sign Up
+    registry = soup.find("a" , {"class" : "btn btn-secondary"}, href = True)["href"]
+    # Reference URL
+    reference_url = url
+
     races = soup.select("div.mb-3")
-    # print (races[0])
-    attrs = races[0].select("div.col")
+    for race in races:
+        attrs = [i.get_text() for i in race.select("div.col")]
+        Races = [race.select_one("h3").get_text()]
+
     # print (len(attrs))
     # for i in attrs:
     #     print(i.get_text().strip())
-    country = soup.select("nav ol li")
-    country = [i.get_text() for i in country]
-    # print ((country))
-    registry = soup.find("a" , {"class" : "btn btn-secondary"}, href = True)["href"]
+
     # print (registry)
-    description = soup.find("descriptions").get_text().strip()
 
 
 fields = ["URL", "Author Name", "Product Name", "Retail Price", "Sales Price", "Category", "Tags"]
