@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import urllib3
 import csv
+import re
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 header = {
@@ -11,7 +12,7 @@ header = {
 domain = "https://marathons.ahotu.com/"
 
 start_page = 1
-end_page = 4663
+end_page = 2
 
 def parse_page(url):
     lst = []
@@ -43,7 +44,10 @@ def parse_content(url):
     country = soup.select("nav ol li")
     country = [i.get_text() for i in country]
     Country = country[-2]
-    Region = country[0] 
+    Region = country[0]
+    website = soup.select_one("div.card-body a", href = True)
+    Website = "" if website is None else website["href"]
+    dct["WEBSITE"] = Website
     dct["Country"] = Country
     dct["Region"] = Region
     # Event
@@ -66,11 +70,17 @@ def parse_content(url):
     dct["Reference URL"] = url
 
     races = soup.select("div.mb-3")
-    for race in races:
+    # print ("Len of Races: ", len(races), url)
+
+    for num, race in enumerate(races):
+        dct["Tag"] = dct["Date"] = dct["Starting Time"] = dct["Type"] = dct["Distance"] = dct["Race"] = ""
         attrs = [i.get_text().strip() for i in race.select("div.col")]
+        Tags =  [i.get_text() for i in race.select("div.col span")]
         attrs = list(filter(lambda x: True if x != "" else False, attrs))
         Races = [race.select_one("h3").get_text()]
-        dct["Tag"] = attrs[-1]
+
+        dct["Tag"] = Tags # attrs[-1]
+    
         _lst = [i.strip() for i in attrs[0].split("-")]
         try:
             dct["Date"], dct["Starting Time"] = _lst[0], _lst[1]
@@ -78,25 +88,29 @@ def parse_content(url):
             dct["Date"] = _lst[0]
             dct["Starting Time"] = ""
 
+        dct["Date"] = re.sub(r'\([^)]*\)', '', dct["Date"]).strip()
         dct["Type"] = attrs[1]
         dct["Distance"] = attrs[2]
         dct["Race"] = Races
-        yield dct
+
+        yield dct.copy()
 
 
-fields = ["Event", "Race", "Country", "Region",  "Tag", "Date", "Starting Time", "Type", "Distance", "Starting Point", "Description", "Sign Up", "Reference URL"]
+fields = ["Event", "Race", "Country", "Region",  "Tag", "Date", "Starting Time", "Type", "Distance", "Starting Point", "Description", "Sign Up", "Reference URL", \
+"WEBSITE"]
 
-lst = []
+Lst = []
 for page in range(start_page, end_page):
     links = parse_page("https://marathons.ahotu.com/calendar?page=%d" % page)
     for link in links:
+        print ("Processing: %s" % link)
         for dct in parse_content(link):
-            lst.append(dct)
+            Lst.append(dct)
 
 with open('scrapped.csv', 'w', encoding="utf-8") as f:
     writer = csv.DictWriter(f, fields)
     writer.writeheader()
-    writer.writerows(lst)
+    writer.writerows(Lst)
 
 
 
