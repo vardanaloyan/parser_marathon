@@ -1,3 +1,7 @@
+"""
+Script made by Vardan Aloyan
+GMail: valoyan2@gmail.com
+"""
 import requests
 from bs4 import BeautifulSoup
 import urllib3
@@ -42,14 +46,14 @@ def parse_content(url):
     soup = BeautifulSoup(page.content, "html.parser")
 
     country = soup.select("nav ol li")
-    country = [i.get_text() for i in country]
-    Country = country[-2]
+    country = [i.get_text().strip() for i in country]
+    # Country = country[-2]
     Region = country[0]
     website = soup.select_one("div.card-body a", href = True)
     Website = "" if website is None else website["href"]
     dct["WEBSITE"] = Website
-    dct["Country"] = Country
-    dct["Region"] = Region
+    dct["Country"] = ""
+    dct["RegionString"] = "/".join(country)
     # Event
     event = soup.select_one("div.col-12 h1").get_text()
     dct["Event"] = event
@@ -77,9 +81,9 @@ def parse_content(url):
         attrs = [i.get_text().strip() for i in race.select("div.col")]
         Tags =  [i.get_text() for i in race.select("div.col span")]
         attrs = list(filter(lambda x: True if x != "" else False, attrs))
-        Races = [race.select_one("h3").get_text()]
+        Races = race.select_one("h3").get_text().replace('[',"").replace(']',"")
 
-        dct["Tag"] = Tags # attrs[-1]
+        dct["Tag"] = str(Tags).replace('[',"").replace(']',"").replace("'","")  # attrs[-1]
     
         _lst = [i.strip() for i in attrs[0].split("-")]
         try:
@@ -96,7 +100,7 @@ def parse_content(url):
         yield dct.copy()
 
 
-fields = ["Event", "Race", "Country", "Region",  "Tag", "Date", "Starting Time", "Type", "Distance", "Starting Point", "Description", "Sign Up", "Reference URL", \
+fields = ["Event", "Race", "Country", "RegionString",  "Tag", "Date", "Starting Time", "Type", "Distance", "Starting Point", "Description", "Sign Up", "Reference URL", \
 "WEBSITE"]
 
 Lst = []
@@ -111,6 +115,4 @@ with open('scrapped.csv', 'w', encoding="utf-8") as f:
     writer = csv.DictWriter(f, fields)
     writer.writeheader()
     writer.writerows(Lst)
-
-
-
+    
