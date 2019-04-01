@@ -4,7 +4,7 @@ import urllib3
 import csv
 import re
 import json
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 header = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
                       '(KHTML, like Gecko) Chrome/65.0.3325.146 Safari/537.36'
@@ -72,8 +72,86 @@ def parse_inner2(url):
                     lst_1.append(tds[0].get_text().strip())
     # print (dct_2)
     # print (lst_1)
-    print (registr_url, lst_1)
+    # print ("list-> ",lst_1)
+    try:
+        registr_fee = lst_1[lst_1.index("Registration fees")+1]
+    except ValueError:
+        registr_fee = ""
+
     print ("-"*15)
+    # print (dct_2.keys())
+    try:
+        registr_open = dct_2["Opening of registration"]
+    except:
+        registr_open = ""
+    try:
+        registr_close = dct_2["Closure of registration"]
+    except:
+        registr_close = ""
+
+    date_time = dct_2["Date and time of start"].split()
+    starting_time = date_time.pop().strip()
+    location_start = dct_2["Location of start"].split()
+
+    try:
+        starting_point = location_start[0]
+    except:
+        starting_point = ""
+        
+    
+    try:
+        country = re.sub('[(){}<>]', '', location_start[1])
+    except:
+        country = ""
+
+    try:
+        distance = re.sub('[(){}<>]', '', dct_2["Distance"]).split()[0].strip()
+    except:
+        distance = ""
+
+    try:
+        elevation_gain = dct_2["Ascent"].strip()
+    except:
+        elevation_gain = ""
+
+    try:
+        descent = dct_2["Descent"].strip()
+    except:
+        descent = ""
+    
+    try:
+        refreshment_points = dct_2["Refreshment points"].strip()
+    except:
+        refreshment_points = ""
+    
+    try:
+        time_limit = dct_2["Maximum time"].strip()
+    except:
+        time_limit = ""
+    
+    source_url = url
+    try:
+        course_url = soup.select_one("div#calevt_fich iframe", src = True)["src"]
+    except:
+        course_url = ""
+    try:
+        participants = dct_2["Number of participants"].strip()
+    except:
+        participants = ""
+
+    description = soup.select("div.content p")
+    Description = ""
+    if len(description) != 0:
+        for c, desc in enumerate(description):
+            if c == 1:
+                 Description += "\nDescription in English\n"
+            Description += desc.get_text()
+    else:
+        Description = ""
+    # print (course_url)
+    print (Description)
+    date = " ".join(date_time)
+    # print (distance)
     # print (len(All_info), len(lst_1)+len(dct_2))
     if img_url is not None:
         img_url = domain + img_url["href"]
