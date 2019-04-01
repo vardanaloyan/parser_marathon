@@ -4,7 +4,8 @@ import urllib3
 import csv
 import re
 import json
-# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import time
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 header = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
                       '(KHTML, like Gecko) Chrome/65.0.3325.146 Safari/537.36'
@@ -50,7 +51,6 @@ def parse_inner2(url):
     dct = {}
     # url = url.strip('"')
     page = session.get(url,headers=header, verify=False)
-
     soup = BeautifulSoup(page.content, "html.parser")
     Event = soup.select_one("div#calevt_titre").contents[-1].strip() 
     Race = soup.select_one("div#race-container h2").contents[-1].strip() #get_text(strip=True)
@@ -60,6 +60,8 @@ def parse_inner2(url):
     lst_1 = []
     dct_2 = {}
     registr_url = ""
+
+
     for info in All_info:
         tds = info.select("td")
         if len(tds) == 2:
@@ -70,9 +72,7 @@ def parse_inner2(url):
                     registr_url = tds[0].select_one("a", href = True)["href"]
                 else:
                     lst_1.append(tds[0].get_text().strip())
-    # print (dct_2)
-    # print (lst_1)
-    # print ("list-> ",lst_1)
+
     try:
         registr_fee = lst_1[lst_1.index("Registration fees")+1]
     except ValueError:
@@ -92,6 +92,7 @@ def parse_inner2(url):
     date_time = dct_2["Date and time of start"].split()
     starting_time = date_time.pop().strip()
     location_start = dct_2["Location of start"].split()
+    date = " ".join(date_time)
 
     try:
         starting_point = location_start[0]
@@ -148,11 +149,7 @@ def parse_inner2(url):
             Description += desc.get_text()
     else:
         Description = ""
-    # print (course_url)
-    print (Description)
-    date = " ".join(date_time)
-    # print (distance)
-    # print (len(All_info), len(lst_1)+len(dct_2))
+
     if img_url is not None:
         img_url = domain + img_url["href"]
     else:
@@ -163,13 +160,143 @@ def parse_inner2(url):
     else:
         WEBSITE = ""
 
+    th = soup.select_one("div#calevt_fich tr th", onclick = True)
+    if th is not None:
+        stage = th.select_one("a.rightarr", onclick = True)
+        params = eval(stage['onclick'].split(";")[0])
+        global sum_distance, sum_elevation_gain, sum_descent, sum_refreshment_points, sum_time_limit
+
+        sum_distance = sum_elevation_gain = sum_descent = sum_refreshment_points = sum_time_limit = 0
+        try:
+
+            sum_distance = reprDist(distance)[0]
+        except Exception as ex:
+            print (ex)
+
+        try:
+
+            sum_elevation_gain = reprDist(elevation_gain)[0]
+        except Exception as ex:
+            print (ex)
+
+        try:
+        
+            sum_descent = reprDist(descent)[0]
+        except Exception as ex:
+            print (ex)
+
+        try:
+        
+            sum_refreshment_points = reprDist(refreshment_points)[0]
+        except Exception as ex:
+            print (ex)
+
+        try:
+            sum_time_limit = get_sec(time_limit)
+        except Exception as ex:
+            sum_time_limit = 0
+            print (ex)
+
+        calcSUMS(params)
+        # print (Event, " ; ", Race)
+        print (source_url)
+        print (sum_distance , sum_elevation_gain , sum_descent , sum_refreshment_points, get_str(sum_time_limit))
+
+        # print (th.get_text().strip())
+        # print (params)
+    # "https://itra.run/calend.php?mode=getEvt&id=2953&annee=2019&idc=16457&idx=2"
+
     dct["Event"]   = Event
     dct["Race"]    = Race
     dct["WEBSITE"] = WEBSITE
 
     return dct
-    # print (Event)
-    # print (Race)
+
+def calcSUMS(params):
+    global sum_distance, sum_elevation_gain, sum_descent, sum_refreshment_points, sum_time_limit
+    url = "https://itra.run/calend.php?mode=getEvt&id={}&annee={}&idc={}&idx={}".format(*params)
+    session = requests.Session()
+    session.max_redirects = 9999999
+    dct = {}
+    # url = url.strip('"')
+    page = session.get(url,headers=header, verify=False)
+    soup = BeautifulSoup(page.content, "html.parser")
+    All_info = soup.select("div#calevt_fich tr") #get_text(strip=True)
+    lst_1 = []
+    dct_2 = {}
+
+    for info in All_info:
+        tds = info.select("td")
+        if len(tds) == 2:
+            dct_2[tds[0].get_text().strip()] = tds[1].get_text().strip()
+        elif len(tds) == 1:
+            if tds[0].get_text().strip() != "":
+                if tds[0].select_one("a", href = True) is not None:
+                    registr_url = tds[0].select_one("a", href = True)["href"]
+                else:
+                    lst_1.append(tds[0].get_text().strip())
+
+    try:
+        distance = re.sub('[(){}<>]', '', dct_2["Distance"]).split()[0].strip()
+    except:
+        distance = ""
+
+    try:
+        elevation_gain = dct_2["Ascent"].strip()
+    except:
+        elevation_gain = ""
+
+    try:
+        descent = dct_2["Descent"].strip()
+    except:
+        descent = ""
+    
+    try:
+        refreshment_points = dct_2["Refreshment points"].strip()
+    except:
+        refreshment_points = ""
+    
+    try:
+        time_limit = dct_2["Maximum time"].strip()
+    except:
+        time_limit = ""
+
+    sum_distance += reprDist(distance)[0]
+    sum_elevation_gain += reprDist(elevation_gain)[0]
+    sum_descent += reprDist(descent)[0]
+    sum_refreshment_points += reprDist(refreshment_points)[0]
+    sum_time_limit += get_sec(time_limit)
+
+    th = soup.select_one("div#calevt_fich tr th", onclick = True)
+  
+    if th is not None:
+        try:
+            stage = th.select_one("a.rightarr", onclick = True)
+            params = eval(stage['onclick'].split(";")[0])
+            calcSUMS(params)
+        except:
+            return 1
+
+
+def get_sec(time_str):
+    _lst = time_str.split(':')
+    if len(_lst) == 3:
+        h, m, s = _lst
+        return int(h) * 3600 + int(m) * 60 + int(s)
+    else:
+        h = 0
+        m, s = _lst
+        return int(h) * 3600 + int(m) * 60 + int(s)
+
+
+def get_str(time_sec):
+    return time.strftime('%H:%M:%S', time.gmtime(time_sec))
+
+def reprDist(val):
+    retval = float(re.findall(r"[-+]?\d*\.\d+|\d+", val)[0])
+    unit = val.replace(re.findall(r"[-+]?\d*\.\d+|\d+", val)[0], "").strip()
+
+    return retval, str(retval)+unit
 
 def parse_inner(lst_item):
     urls = []
@@ -188,16 +315,11 @@ def parse_inner(lst_item):
 
 def parse_content():
     lst = []
-    # https://itra.run/calend.php?ide=3075&mode=getEvt&id=3075&annee=2019&opendirect=1
-    # url = "https://itra.run/calend.php"
-    url = "https://itra.run/calend.php?mode=getcal&num_page=&input_cal_rech=&ptsmin=0&ptsmax=6&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin=30/03/2019&dtmax=30/03/2020"
-    # url = str("https://itra.run/calend.php?mode=getcal&num_page=&input_cal_rech=&ptsmin=0&ptsmax=7&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin=30%2F03%2F2019&dtmax=30%2F03%2F2020#")
+    url = "https://itra.run/calend.php?mode=getcal&num_page=&input_cal_rech=&ptsmin=0&ptsmax=6&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin=01/04/2019&dtmax=01/04/2020"
     session = requests.Session()
     session.max_redirects = 9999999
 
     page = session.get(url, headers=headers, verify=False)
-    # content = page.content
-    # print (content)
     soup = BeautifulSoup(page.content, "html.parser")
     Params = soup.select("div.race a", href = True)
     for param in Params:
@@ -220,13 +342,6 @@ fields = ["Event", "Race", "WEBSITE"]
 # fields = ["Event", "Race", "Country", "RegionString",  "Tag", "Date", "Starting Time", "Type", "Distance", "Starting Point", "Description", "Sign Up", "Reference URL", \
 # "WEBSITE"]
 
-# Lst = []
-# for page in range(start_page, end_page):
-#     links = parse_page("https://marathons.ahotu.com/calendar?page=%d" % page)
-#     for link in links:
-#         print ("Processing: %s" % link)
-#         for dct in parse_content(link):
-#             Lst.append(dct)
 
 with open('scrapped.csv', 'w', encoding="utf-8") as f:
     writer = csv.DictWriter(f, fields)
