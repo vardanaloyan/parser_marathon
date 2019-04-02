@@ -11,29 +11,11 @@ header = {
                       '(KHTML, like Gecko) Chrome/65.0.3325.146 Safari/537.36'
 
     }
-
-headers =\
-{ 
-# "Host": "itra.run",
-# "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0",
-# "Accept": "*/*",
-# "Accept-Language": "en-US,en;q=0.5",
-# "Accept-Encoding": "gzip, deflate, br",
-# "Referer": "https://itra.run/page/290/Calendar.html",
-# "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-# "X-Requested-With": "XMLHttpRequest",
-# "Content-Length": 160,
-# "Connection": "keep-alive",
-# "Cookie": "PHPSESSID=1m78gn86k822fur2ke4n4qatd6; langue_affich=_en; __utma=186997872.1875485845.1553926291.1553926291.1553926291.1; __utmb=186997872.1.10.1553926291; __utmc=186997872; __utmz=186997872.1553926291.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none); __utmt=1",
-# "Cache-Control": "max-age=0, no-cache",
-# "Pragma": "no-cache"
-}
-
-# domain = "https://marathons.ahotu.com/"
+headers= {}
 domain = "https://itra.run"
-start_page = 1
-end_page = 2
 
+dateMin = "02/04/2019"
+dateMax = "02/04/2020"
 
 
 def _tmp(val):
@@ -78,8 +60,6 @@ def parse_inner2(url):
     except ValueError:
         registr_fee = ""
 
-    print ("-"*15)
-    # print (dct_2.keys())
     try:
         registr_open = dct_2["Opening of registration"]
     except:
@@ -161,6 +141,7 @@ def parse_inner2(url):
         WEBSITE = ""
 
     th = soup.select_one("div#calevt_fich tr th", onclick = True)
+
     if th is not None:
         stage = th.select_one("a.rightarr", onclick = True)
         params = eval(stage['onclick'].split(";")[0])
@@ -199,16 +180,34 @@ def parse_inner2(url):
 
         calcSUMS(params)
         # print (Event, " ; ", Race)
-        print (source_url)
+        # print (source_url)
         print (sum_distance , sum_elevation_gain , sum_descent , sum_refreshment_points, get_str(sum_time_limit))
-
-        # print (th.get_text().strip())
-        # print (params)
-    # "https://itra.run/calend.php?mode=getEvt&id=2953&annee=2019&idc=16457&idx=2"
+    else:
+        sum_distance = sum_elevation_gain = sum_descent = sum_refreshment_points = sum_time_limit = ""
 
     dct["Event"]   = Event
     dct["Race"]    = Race
-    dct["WEBSITE"] = WEBSITE
+    dct["Description"] = Description
+    dct["Participants"] = participants 
+    dct["Registration Opens"] = registr_open
+    dct["Registration Closes"] = registr_close
+    dct["Entry Fee"] = registr_fee
+    dct["Sign Up"] = registr_url
+    dct["Date"] = date
+    dct["Starting Time"] = starting_time
+    dct["Starting Point"] = starting_point
+    dct["Country"] = country
+    dct["SumDistance"] = sum_distance 
+    dct["SumElevation Gain"] = sum_elevation_gain
+    dct["SumDescent"] = sum_descent
+    dct["SumRefreshment Points"] = sum_refreshment_points
+    dct["SumTimeLimit"] = sum_time_limit
+    dct["Website"] = WEBSITE
+    dct["CourseUrl"] = course_url
+    dct["CourseFileName"] = "" #
+    dct["ProfilePicURL"] = img_url
+    dct["ProfilePicFile Name"] = "" #
+    dct["SourceUrl"] = source_url
 
     return dct
 
@@ -315,7 +314,7 @@ def parse_inner(lst_item):
 
 def parse_content():
     lst = []
-    url = "https://itra.run/calend.php?mode=getcal&num_page=&input_cal_rech=&ptsmin=0&ptsmax=6&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin=01/04/2019&dtmax=01/04/2020"
+    url = "https://itra.run/calend.php?mode=getcal&num_page=&input_cal_rech=&ptsmin=0&ptsmax=6&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin={}&dtmax={}".format(dateMin, dateMax)
     session = requests.Session()
     session.max_redirects = 9999999
 
@@ -337,10 +336,8 @@ Data_list = []
 for URL in URLS:
     Data_list.append(parse_inner2(URL))
 
-fields = ["Event", "Race", "WEBSITE"]
+fields = ['Event', 'Race', 'Description', 'Participants', 'Registration Opens', 'Registration Closes', 'Entry Fee', 'Sign Up', 'Date', 'Starting Time', 'Starting Point', 'Country', 'SumDistance', 'SumElevation Gain', 'SumDescent', 'SumRefreshment Points', 'SumTimeLimit', 'Website', 'CourseUrl', 'CourseFileName', 'ProfilePicURL', 'ProfilePicFile Name', 'SourceUrl']
 
-# fields = ["Event", "Race", "Country", "RegionString",  "Tag", "Date", "Starting Time", "Type", "Distance", "Starting Point", "Description", "Sign Up", "Reference URL", \
-# "WEBSITE"]
 
 
 with open('scrapped.csv', 'w', encoding="utf-8") as f:
