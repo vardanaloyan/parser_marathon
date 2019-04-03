@@ -5,7 +5,9 @@ import csv
 import re
 import json
 import time
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import datetime
+
+# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 header = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
                       '(KHTML, like Gecko) Chrome/65.0.3325.146 Safari/537.36'
@@ -14,9 +16,9 @@ header = {
 headers= {}
 domain = "https://itra.run"
 
-dateMin = "02/04/2019"
-dateMax = "02/04/2020"
-
+now = datetime.datetime.today()
+dateMin = now.strftime('%d/%m/%Y')
+dateMax = datetime.datetime(day = now.day, month = now.month, year=now.year + 1).strftime('%d/%m/%Y')
 
 def _tmp(val):
     if val == "":
@@ -81,7 +83,7 @@ def parse_inner2(url):
         
     
     try:
-        country = re.sub('[(){}<>]', '', location_start[1])
+        country = re.search(r'\((.*?)\)', dct_2["Location of start"].strip()).group(1)
     except:
         country = ""
 
@@ -140,6 +142,14 @@ def parse_inner2(url):
     else:
         WEBSITE = ""
 
+
+    logo = soup.select_one("div#calevt_lst img", src = True)
+    
+    if logo is not None:
+        logo_url = logo["src"]
+    else:
+        logo_url = ""
+
     th = soup.select_one("div#calevt_fich tr th", onclick = True)
 
     if th is not None:
@@ -152,38 +162,44 @@ def parse_inner2(url):
 
             sum_distance = reprDist(distance)[0]
         except Exception as ex:
-            print (ex)
+            pass
 
         try:
 
             sum_elevation_gain = reprDist(elevation_gain)[0]
         except Exception as ex:
-            print (ex)
+            pass
+
 
         try:
         
             sum_descent = reprDist(descent)[0]
         except Exception as ex:
-            print (ex)
-
+            pass
+            
         try:
         
             sum_refreshment_points = reprDist(refreshment_points)[0]
         except Exception as ex:
-            print (ex)
-
+            pass
+            
         try:
             sum_time_limit = get_sec(time_limit)
         except Exception as ex:
             sum_time_limit = 0
-            print (ex)
-
+            pass
+            
         calcSUMS(params)
+        sum_time_limit = get_str(sum_time_limit)
         # print (Event, " ; ", Race)
         # print (source_url)
-        print (sum_distance , sum_elevation_gain , sum_descent , sum_refreshment_points, get_str(sum_time_limit))
+        # print (sum_distance , sum_elevation_gain , sum_descent , sum_refreshment_points, get_str(sum_time_limit))
     else:
-        sum_distance = sum_elevation_gain = sum_descent = sum_refreshment_points = sum_time_limit = ""
+        sum_distance = distance
+        sum_elevation_gain = elevation_gain
+        sum_descent = descent
+        sum_refreshment_points = refreshment_points
+        sum_time_limit = time_limit
 
     dct["Event"]   = Event
     dct["Race"]    = Race
@@ -201,12 +217,13 @@ def parse_inner2(url):
     dct["SumElevation Gain"] = sum_elevation_gain
     dct["SumDescent"] = sum_descent
     dct["SumRefreshment Points"] = sum_refreshment_points
-    dct["SumTimeLimit"] = sum_time_limit
+    dct["SumTimeLimit"] = sum_time_limit #
     dct["Website"] = WEBSITE
     dct["CourseUrl"] = course_url
-    dct["CourseFileName"] = "" #
+    # dct["CourseFileName"] = "" #
+    dct["LogoPicURL"] = logo_url
     dct["ProfilePicURL"] = img_url
-    dct["ProfilePicFile Name"] = "" #
+    # dct["ProfilePicFile Name"] = "" #
     dct["SourceUrl"] = source_url
 
     return dct
@@ -289,7 +306,10 @@ def get_sec(time_str):
 
 
 def get_str(time_sec):
-    return time.strftime('%H:%M:%S', time.gmtime(time_sec))
+    if time_sec >= 3600:
+        return time.strftime('%H:%M:%S', time.gmtime(time_sec))
+    else:
+        return time.strftime('%M:%S', time.gmtime(time_sec))
 
 def reprDist(val):
     retval = float(re.findall(r"[-+]?\d*\.\d+|\d+", val)[0])
@@ -312,9 +332,19 @@ def parse_inner(lst_item):
     return urls
 
 
-def parse_content():
+def number_of_pages(main_url):
+    session = requests.Session()
+    session.max_redirects = 9999999
+    page = session.get(main_url.format(1, dateMin, dateMax), headers=headers, verify=False)
+    soup = BeautifulSoup(page.content, "html.parser")
+    nbpmax = soup.select_one("script").get_text().strip().split()[-2]
+    nbpmax = int(re.findall(r"[-+]?\d*\.\d+|\d+", nbpmax)[0])
+
+    return nbpmax
+
+def parse_content(url):
     lst = []
-    url = "https://itra.run/calend.php?mode=getcal&num_page=&input_cal_rech=&ptsmin=0&ptsmax=6&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin={}&dtmax={}".format(dateMin, dateMax)
+    # url = "https://itra.run/calend.php?mode=getcal&num_page=&input_cal_rech=&ptsmin=0&ptsmax=6&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin={}&dtmax={}".format(dateMin, dateMax)
     session = requests.Session()
     session.max_redirects = 9999999
 
@@ -324,19 +354,25 @@ def parse_content():
     for param in Params:
         params = eval(param["onclick"].split(";")[0])
         lst.append(params)
-
     return lst
   
-URLS = []
-params = parse_content()
-for param in params:
-    URLS += parse_inner(param)
-
+PAGE_URL = "https://itra.run/calend.php?mode=getcal&num_page={}&input_cal_rech=&ptsmin=0&ptsmax=6&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin={}&dtmax={}"
+NUMBER_OF_PAGES = 2# number_of_pages(PAGE_URL)
 Data_list = []
-for URL in URLS:
-    Data_list.append(parse_inner2(URL))
 
-fields = ['Event', 'Race', 'Description', 'Participants', 'Registration Opens', 'Registration Closes', 'Entry Fee', 'Sign Up', 'Date', 'Starting Time', 'Starting Point', 'Country', 'SumDistance', 'SumElevation Gain', 'SumDescent', 'SumRefreshment Points', 'SumTimeLimit', 'Website', 'CourseUrl', 'CourseFileName', 'ProfilePicURL', 'ProfilePicFile Name', 'SourceUrl']
+for page in range(1, NUMBER_OF_PAGES + 1):
+    URLS = []
+    url = PAGE_URL.format(page, dateMin, dateMax)
+    print ("Page ", page, " url ", url)
+    params = parse_content(url)
+    for param in params:
+        URLS += parse_inner(param)
+    print ("  Scrapping {} URLS".format(len(URLS)))
+    
+    for URL in URLS:
+        Data_list.append(parse_inner2(URL))
+
+fields = ['Event', 'Race', 'Description', 'Participants', 'Registration Opens', 'Registration Closes', 'Entry Fee', 'Sign Up', 'Date', 'Starting Time', 'Starting Point', 'Country', 'SumDistance', 'SumElevation Gain', 'SumDescent', 'SumRefreshment Points', 'SumTimeLimit', 'Website', 'CourseUrl', 'LogoPicURL', 'ProfilePicURL', 'SourceUrl']
 
 
 

@@ -1,0 +1,473 @@
+<bound method BeautifulSoup.prettify of <script type="text/javascript">
+function filterToggle(noanim) {
+	var $shown=$("#filterZone").is(":visible");
+	if($shown) {
+		$("#filterZone").slideUp(500,function() { $("#cal").width("auto").height("auto"); });
+		$("#fleche").removeClass("flechehaut");
+	} else {
+		$("#cal").width(735);
+		autoHeightFilter();
+		if(noanim) $("#filterZone").show();
+		else $("#filterZone").slideDown();
+		$("#fleche").addClass("flechehaut");
+	}
+}
+function autoHeightFilter() {
+	if ($("#filterZone").is(":visible")){
+		$("#filterZone").height("auto");
+		var $h=$("#cal").height();
+		var $h2=$("#filterZone").height();
+		$("#filterZone").height(Math.max($h,$h2));
+		return Math.max($h,$h2);
+	}
+}
+function pagination(icone){
+	var page = parseInt($("#pg").html(), 10);
+	var pagemax = parseInt($("#nbpmax").html(), 10);
+	if(!icone){
+		if(page == 1) {
+			$("#fgauche").addClass("dis");
+		} else {
+			$("#fgauche").removeClass("dis");
+		}
+		if (page == pagemax){
+			$("#fdroite").addClass("dis");
+		} else {
+			$("#fdroite").removeClass("dis");
+		}
+	} else if(icone == "moin" && page > 1) {
+		page= page - 1;
+		filtrer(page);
+	} else if (icone == "plus" && page < pagemax) {
+		page = page + 1;
+		filtrer(page);
+	}	
+	
+}
+function changement(icone,event) {
+	
+	if (icone == "crit") {
+		if($("#critmoins").attr("src").indexOf("/images/moins.png") >= 0){
+			$("#critmoins").attr("src", "/images/plusblk.png");
+			$("#crit").hide();
+		} else {
+			$("#critmoins").attr("src", "/images/moins.png");
+			$("#crit").show();
+		}
+	} else if (icone == "filtre") {
+		if($("#moins1").attr("src").indexOf("/images/moins.png") >= 0){
+			$("#moins1").attr("src", "/images/plusblk.png");
+			$("#periode").hide();
+		} else {
+			$("#moins1").attr("src", "/images/moins.png");
+			$("#periode").show();
+		}
+	} else if (icone == "filtre2") {
+		if($("#moins2").attr("src").indexOf("/images/moins.png") >= 0){
+			$("#moins2").attr("src", "/images/plusblk.png");
+			$("#localisation").hide();
+		} else {
+			$("#moins2").attr("src", "/images/moins.png");
+			$("#localisation").show();
+		}
+	} else if (icone == "filtre_continent") {
+		var id = event.currentTarget.id;
+		var i = id.indexOf("_");
+		i = i + 1;
+		if($("#"+id).attr("src").indexOf("/images/moins.png") >= 0){
+			$("#"+id).attr("src", "/images/plusblk.png");
+			$("#cont_"+id[i]).hide();
+		} else {
+			$("#"+id).attr("src", "/images/moins.png");
+			$("#cont_"+id[i]).show();
+		}
+	}
+	autoHeightFilter();
+}
+function filtrage(continent,event) {
+	var longueur = $("#cont_"+continent+" input:checked").length;
+	var nb = $("#cont_"+continent+" input[type=checkbox]").length;
+	var classe = event.target.className.split(" ")[0];
+	if (longueur == 0 && classe.indexOf("filtresP") < 0) {
+		$("#"+continent).prop("checked", true);
+		$("#cont_"+continent).show(); 
+		$("#plus_"+continent).attr("src", "/images/moins.png");
+		$(".filtresP"+continent).prop("checked" , "true");
+	} else if (longueur == nb) {
+		if (classe.indexOf("filtresP") < 0){
+			$("#"+continent).prop("indeterminate", false);
+			$("#"+continent).prop("checked", false);
+			$(".filtresP"+continent).removeAttr("checked");
+		} else {
+			$("#"+continent).prop("indeterminate", false);
+			$("#"+continent).prop("checked", true);
+		}
+	} else if (longueur < nb && longueur > 0) {
+		if (classe.indexOf("filtresP") >= 0){
+			$("#"+continent).prop("indeterminate", true);
+			$("#"+continent).prop("checked", false);
+		} else {
+			$("#"+continent).prop("checked", true);
+			$(".filtresP"+continent).prop("checked" , "true");
+		}
+	} else {
+		$("#"+continent).prop("indeterminate", false);
+		$(".filtresP"+continent).removeAttr("checked");
+	}
+	filtrer();
+}
+
+function date(nosub){
+	var periode = $("#periode input[name='periode']:checked").attr("value");
+	
+	switch (periode){
+		case "semaine":
+			$("input[name='dtmin']").val("03/04/2019");
+			$("input[name='dtmax']").val("03/05/2019");
+			$('#persoF').hide();
+			SaisieDate(document.fFiltres.dtmax);
+			break;
+		
+		case "mois":
+			$("input[name='dtmin']").val("03/04/2019");
+			$("input[name='dtmax']").val("03/04/2020");
+			$('#persoF').hide();
+			SaisieDate(document.fFiltres.dtmax);
+			break;
+		
+		case "6mois":
+			$("input[name='dtmin']").val("03/04/2019");
+			$("input[name='dtmax']").val("03/10/2019");
+			SaisieDate(document.fFiltres.dtmax);
+			$('#persoF').hide();
+			break;
+		
+		default:
+			SaisieDate(document.fFiltres.dtmin);
+			SaisieDate(document.fFiltres.dtmax);
+			$('#persoF').show();
+			if(nosub) {
+				verif_date();
+				return;
+			}
+	}
+	verif_date();
+	filtrer();
+}
+
+function verif_date() {
+		if (date2js($("input[name='dtmin']").val()) > date2js($("input[name='dtmax']").val())){
+			var tampon = $("input[name='dtmin']").val();
+			$("input[name='dtmin']").val($("input[name='dtmax']").val());
+			$("input[name='dtmax']").val(tampon);
+		}
+}
+
+function filtrer (p){
+	if(!p){
+		p = "";
+	}
+	$.ajax({url: "/calend.php", type:"POST", method: "POST", data: "mode=getcal&num_page="+p+"&"+getFormData(document.fFiltres)}).done(function (t){
+		$("#cal").html(t);
+		autoHeightFilter();
+		getUp();
+		$("#cal .race .cal-vign img").each(function () { if($(this).width()==$(this).height()) { $(this).css({minWidth:"auto"}).height($(this).parent("p.cal-vign").height()); $(this).parent("p.cal-vign").css({textAlign:"center"});} });
+	});
+}
+function getUp() {
+	var curscroll=$(document).scrollTop();
+	if(curscroll<280 || curscroll>480) {
+		$('body,html').stop(true,true).animate({scrollTop:320}, 'slow');
+	}
+}
+$(function() {
+	$("#input_cal_rech").keypress(function(e) {
+		if(e.which==13) {
+			filtrer();
+		}
+	});
+	
+	$(document).scroll(function() {
+		if($(document).scrollTop()>320) $("#filt_rech").addClass("fix");
+		else $("#filt_rech").removeClass("fix");
+	});
+	
+	$("#slider-pts").slider({
+		range:true,
+		min:0,
+		max:6,
+		step:1,
+		values:[0,6],
+		slide:function(event, ui) {
+			$(document.fFiltres.ptsmin).val(ui.values[0]);
+			$(document.fFiltres.ptsmax).val(ui.values[1]);
+			$(this).find(".ui-slider-handle:first").html(ui.values[0]);
+			$(this).find(".ui-slider-handle:last").html(ui.values[1]);
+		},
+		change:function() {
+			$(document.fFiltres.critpts).prop("checked", true);
+			filtrer();
+		}
+	});
+	$("#slider-pts .ui-slider-handle:first").html("0");
+	$("#slider-pts .ui-slider-handle:last").html("6");
+	
+	$("#slider-mont").slider({
+		range:true,
+		min:0,
+		max:12,
+		step:1,
+		values:[0,12],
+		slide:function(event, ui) {
+			$(document.fFiltres.montmin).val(ui.values[0]);
+			$(document.fFiltres.montmax).val(ui.values[1]);
+			$(this).find(".ui-slider-handle:first").html(ui.values[0]);
+			$(this).find(".ui-slider-handle:last").html((ui.values[1]==12?"&ge;12":ui.values[1]));
+		},
+		change:function() {
+			$(document.fFiltres.critmont).prop("checked", true);
+			filtrer();
+		}
+	});
+	$("#slider-mont .ui-slider-handle:first").html("0");
+	$("#slider-mont .ui-slider-handle:last").html("&ge;12");
+	
+	$("#slider-finish").slider({
+		range:true,
+		min:100,
+		max:600,
+		step:20,
+		values:[100,600],
+		slide:function(event, ui) {
+			$(document.fFiltres.finishmin).val(ui.values[0]);
+			$(document.fFiltres.finishmax).val(ui.values[1]);
+			$(this).find(".ui-slider-handle:first").html(ui.values[0]);
+			$(this).find(".ui-slider-handle:last").html(ui.values[1]);
+		},
+		change:function() {
+			$(document.fFiltres.critfinish).prop("checked", true);
+			filtrer();
+		}
+	});
+	$("#slider-finish .ui-slider-handle:first").html("100");
+	$("#slider-finish .ui-slider-handle:last").html("600");
+	
+	initDatePicker(".dt", false, true);
+			filtrer();
+			filterToggle(true); //On ouvre le filtre par défaut...
+	
+	$(".fancybox").fancybox();
+	
+});
+
+function showEvt(id, annee, idc, idx, opendirect) {
+	if(!opendirect) window.history.pushState({"html":$("#content").html()}, "", location.href);
+	$.ajax({url: "/calend.php", type:"POST", method: "POST", data: "mode=getEvt&id="+id+"&annee="+annee+(idc?"&idc="+idc:"")+(idx?"&idx="+idx:"")+(opendirect?"&opendirect=1":"")}).done(function (t){
+		$("#cont_evt").remove();
+		$("#content").append("<div id=\"cont_evt\">"+t+"</div>");
+		$("#cont_evt").css({minHeight:$("#content").height()}).html(t).show();
+		//Faut il remonter l'ascenseur ?
+		getUp();
+	});
+	
+}
+window.onpopstate = function(event) {
+  if(event.state) {
+	  $("#cont_evt").remove();
+	  history.back();
+  } else if(location.href.indexOf("/page/290/")<0) {
+	  location.href="/page/290/Calendar.html"
+  }
+};
+function showPic(p) {
+	$('#poppic').html('<div style="text-align:center"><img src="'+p+'"/></div>').dialog('option', {width:'80%',height:'auto'}).dialog('open');
+}
+</script>
+<form method="post" name="fFiltres" onsubmit="filtrer(); return false;">
+<div id="filt_rech">
+<div id="cal_filt" onclick="filterToggle()"><img class="flechehaut" id="fleche" src="/images/fleche.png"/>
+<b>Filter...</b></div>
+<div id="cal_rech"><input id="input_cal_rech" name="input_cal_rech" placeholder="Name of the event, race"/></div>
+<a class="loupe" href="#" onclick="filtrer();return false;"></a>
+<div id="pagination"><span id="nb_res">0</span> result(s)		<div class="navig">
+<a class="leftarr dis" href="#" id="fgauche" onclick="pagination('moin'); return false;"></a>
+<span id="pg">1</span> / <span id="nbpmax">1</span>
+<a class="rightarr dis" href="#" id="fdroite" onclick="pagination('plus'); return false;"></a>
+</div>
+</div>
+	 
+</div>
+<div id="filterZone">
+<ul>
+<li class="entete"><div onclick="changement('crit',event)"><img class="plusmoins" id="critmoins" src="/images/moins.png"/><h4>Route characteristics<div style="font-size: 0.7em;">Only for evaluated races</div></h4></div></li>
+<div id="crit">
+<li>
+<img src="/images/endurblk.png"/>
+<label><input name="critpts" onclick="filtrer();" type="checkbox" value="1"/> Endurance points</label><br/>
+<input name="ptsmin" type="hidden" value="0"/>
+<input name="ptsmax" type="hidden" value="6"/>
+<div class="slid" id="slider-pts"></div>
+</li>
+<li style="margin-top: 1.5em;">
+<img src="/images/montblk.png" style="margin-right:13px;"/>
+<label><input name="critmont" onclick="filtrer();" type="checkbox" value="1"/> Mountain level</label><br/>
+<input name="montmin" type="hidden" value="0"/>
+<input name="montmax" type="hidden" value="14"/>
+<div class="slid" id="slider-mont"></div>
+</li>
+<li style="margin-top: 1.5em;">
+<img src="/images/finisherblk.png" style="margin-right:13px;"/>
+<label><input name="critfinish" onclick="filtrer();" type="checkbox" value="1"/> Finisher criteria</label><br/>
+<input name="finishmin" type="hidden" value="100"/>
+<input name="finishmax" type="hidden" value="600"/>
+<div class="slid" id="slider-finish"></div>
+</li>
+</div>
+<hr/>
+<li class="entete"><div onclick="changement('filtre',event)"><img class="plusmoins" id="moins1" src="/images/moins.png"/><h4>Period</h4></div></li>
+<div id="periode">
+<li><label><input name="periode" onclick="date()" type="radio" value="semaine"/> This week</label></li>
+<li><label><input name="periode" onclick="date()" type="radio" value="mois"/> Next 30 days</label></li>
+<li><label><input name="periode" onclick="date()" type="radio" value="6mois"/> Next 6 months</label></li>
+<li><label><input checked="true" name="periode" onclick="date(true)" type="radio" value="perso"/> Personalised</label></li></div></ul></div></form>
+<table id="persoF">
+<tr><td>Between the:</td><td><input class="dt" name="dtmin" onchange="date()" value="03/04/2019"/></td></tr>
+<tr><td>And the :</td><td><input class="dt" name="dtmax" onchange="date()" value="03/04/2020"/></td></tr>
+</table>
+
+<hr/>
+<li class="entete"><div onclick="changement('filtre2',event)"><img class="plusmoins" id="moins2" src="/images/moins.png"/><h4>Location</h4></div></li>
+<div id="localisation">
+<li class="continent"><img class="plusmoins" id="plus_1" onclick="changement('filtre_continent',event)" src="/images/plusblk.png"/><label><input id="1" onclick="filtrage('1',event)" type="checkbox" value="Afrique"/> Afrique</label></li>
+<ul id="cont_1" style="display: none;">
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="ZA"/> Afrique du Sud</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="DZ"/> Algérie</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="BF"/> Burkina</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="CV"/> Cap-Vert</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="EG"/> Egypte</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="ET"/> Ethiopie</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="KE"/> Kenya</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="LS"/> Lesotho</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="MG"/> Madagascar</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="ML"/> Mali</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="MA"/> Maroc</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="MU"/> Maurice</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="NA"/> Namibie</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="UG"/> Ouganda</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="SN"/> Sénégal</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="TZ"/> Tanzanie</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="TD"/> Tchad</label></li>
+<li class="pays"><label><input class="filtresP1" name="pays[]" onclick="filtrage('1',event)" type="checkbox" value="TN"/> Tunisie</label></li>
+</ul> <li class="continent"><img class="plusmoins" id="plus_2" onclick="changement('filtre_continent',event)" src="/images/plusblk.png"/><label><input id="2" onclick="filtrage('2',event)" type="checkbox" value="Amérique du Nord"/> Amérique du Nord</label></li>
+<ul id="cont_2" style="display: none;">
+<li class="pays"><label><input class="filtresP2" name="pays[]" onclick="filtrage('2',event)" type="checkbox" value="CA"/> Canada</label></li>
+<li class="pays"><label><input class="filtresP2" name="pays[]" onclick="filtrage('2',event)" type="checkbox" value="CR"/> Costa Rica</label></li>
+<li class="pays"><label><input class="filtresP2" name="pays[]" onclick="filtrage('2',event)" type="checkbox" value="CU"/> Cuba</label></li>
+<li class="pays"><label><input class="filtresP2" name="pays[]" onclick="filtrage('2',event)" type="checkbox" value="US"/> Etats-Unis</label></li>
+<li class="pays"><label><input class="filtresP2" name="pays[]" onclick="filtrage('2',event)" type="checkbox" value="GT"/> Guatemala</label></li>
+<li class="pays"><label><input class="filtresP2" name="pays[]" onclick="filtrage('2',event)" type="checkbox" value="MX"/> Mexique</label></li>
+<li class="pays"><label><input class="filtresP2" name="pays[]" onclick="filtrage('2',event)" type="checkbox" value="NI"/> Nicaragua</label></li>
+<li class="pays"><label><input class="filtresP2" name="pays[]" onclick="filtrage('2',event)" type="checkbox" value="DO"/> République dominicaine</label></li>
+<li class="pays"><label><input class="filtresP2" name="pays[]" onclick="filtrage('2',event)" type="checkbox" value="SV"/> Salvador</label></li>
+</ul> <li class="continent"><img class="plusmoins" id="plus_3" onclick="changement('filtre_continent',event)" src="/images/plusblk.png"/><label><input id="3" onclick="filtrage('3',event)" type="checkbox" value="Amérique du Sud"/> Amérique du Sud</label></li>
+<ul id="cont_3" style="display: none;">
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="AR"/> Argentine</label></li>
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="BO"/> Bolivie</label></li>
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="BR"/> Brésil</label></li>
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="CL"/> Chili</label></li>
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="CO"/> Colombie</label></li>
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="EC"/> Equateur</label></li>
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="GY"/> Guyana</label></li>
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="PE"/> Pérou</label></li>
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="PA"/> Panama</label></li>
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="PY"/> Paraguay</label></li>
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="UY"/> Uruguay</label></li>
+<li class="pays"><label><input class="filtresP3" name="pays[]" onclick="filtrage('3',event)" type="checkbox" value="VE"/> Venezuela</label></li>
+</ul> <li class="continent"><img class="plusmoins" id="plus_4" onclick="changement('filtre_continent',event)" src="/images/plusblk.png"/><label><input id="4" onclick="filtrage('4',event)" type="checkbox" value="Asie"/> Asie</label></li>
+<ul id="cont_4" style="display: none;">
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="SA"/> Arabie saoudite</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="BH"/> Bahreïn</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="BT"/> Bhoutan</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="BN"/> Brunei</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="KH"/> Cambodge</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="CN"/> Chine</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="KR"/> Corée du Sud</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="AE"/> Emirats arabes unis</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="HK"/> Hong Kong, Chine</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="IN"/> Inde</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="ID"/> Indonésie</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="IR"/> Iran</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="JP"/> Japon</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="JO"/> Jordanie</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="KZ"/> Kazakhstan</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="KG"/> Kirghizistan</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="XK"/> Kosovo</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="LA"/> Laos</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="MY"/> Malaisie</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="MN"/> Mongolie</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="NP"/> Népal</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="OM"/> Oman</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="PH"/> Philippines</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="SG"/> Singapour</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="LK"/> Sri Lanka</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="TW"/> Taïwan</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="TH"/> Thaïlande</label></li>
+<li class="pays"><label><input class="filtresP4" name="pays[]" onclick="filtrage('4',event)" type="checkbox" value="VN"/> Viêt Nam</label></li>
+</ul> <li class="continent"><img class="plusmoins" id="plus_5" onclick="changement('filtre_continent',event)" src="/images/plusblk.png"/><label><input id="5" onclick="filtrage('5',event)" type="checkbox" value="Europe"/> Europe</label></li>
+<ul id="cont_5" style="display: none;">
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="AL"/> Albanie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="DE"/> Allemagne</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="AD"/> Andorre</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="AT"/> Autriche</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="BE"/> Belgique</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="BY"/> Biélorussie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="BA"/> Bosnie-Herzégovine</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="BG"/> Bulgarie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="CY"/> Chypre</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="HR"/> Croatie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="DK"/> Danemark</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="ES"/> Espagne</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="EE"/> Estonie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="FI"/> Finlande</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="FR"/> France</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="GR"/> Grèce</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="HU"/> Hongrie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="IE"/> Irlande</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="IS"/> Islande</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="IL"/> Israël</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="IT"/> Italie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="LV"/> Lettonie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="LT"/> Lituanie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="LU"/> Luxembourg</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="MK"/> Macédoine (ex-Rép yougoslave de)</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="MT"/> Malte</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="ME"/> Monténégro</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="NO"/> Norvège</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="NL"/> Pays-Bas</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="PL"/> Pologne</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="PT"/> Portugal</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="CZ"/> République tchèque</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="RO"/> Roumanie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="GB"/> Royaume-Uni</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="RU"/> Russie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="RS"/> Serbie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="SI"/> Slovénie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="SK"/> Slovaquie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="SE"/> Suède</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="CH"/> Suisse</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="TR"/> Turquie</label></li>
+<li class="pays"><label><input class="filtresP5" name="pays[]" onclick="filtrage('5',event)" type="checkbox" value="UA"/> Ukraine</label></li>
+</ul> <li class="continent"><img class="plusmoins" id="plus_6" onclick="changement('filtre_continent',event)" src="/images/plusblk.png"/><label><input id="6" onclick="filtrage('6',event)" type="checkbox" value="Océanie"/> Océanie</label></li>
+<ul id="cont_6" style="display: none;">
+<li class="pays"><label><input class="filtresP6" name="pays[]" onclick="filtrage('6',event)" type="checkbox" value="AU"/> Australie</label></li>
+<li class="pays"><label><input class="filtresP6" name="pays[]" onclick="filtrage('6',event)" type="checkbox" value="FJ"/> Fidji</label></li>
+<li class="pays"><label><input class="filtresP6" name="pays[]" onclick="filtrage('6',event)" type="checkbox" value="NZ"/> Nouvelle-Zélande</label></li>
+</ul> </div>
+<hr>
+</hr>
+
+
+<div class="calend" id="cal"></div>
+<div style="clear:both"></div>
+<div class="popin" id="poppic"></div>
+>
