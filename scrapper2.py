@@ -6,19 +6,20 @@ import re
 import json
 import time
 import datetime
-
-# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-header = {
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
-                      '(KHTML, like Gecko) Chrome/65.0.3325.146 Safari/537.36'
+                      '(KHTML, like Gecko) Chrome/65.0.3325.146 Safari/537.36',
+    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
 
     }
-headers= {}
-domain = "https://itra.run"
 
+domain = "https://itra.run"
 now = datetime.datetime.today()
 dateMin = now.strftime('%d/%m/%Y')
 dateMax = datetime.datetime(day = now.day, month = now.month, year=now.year + 1).strftime('%d/%m/%Y')
+print (dateMin)
+print (dateMax)
 
 def _tmp(val):
     if val == "":
@@ -34,7 +35,7 @@ def parse_inner2(url):
     session.max_redirects = 9999999
     dct = {}
     # url = url.strip('"')
-    page = session.get(url,headers=header, verify=False)
+    page = session.get(url,headers=headers, verify=False)
     soup = BeautifulSoup(page.content, "html.parser")
     Event = soup.select_one("div#calevt_titre").contents[-1].strip() 
     Race = soup.select_one("div#race-container h2").contents[-1].strip() #get_text(strip=True)
@@ -191,9 +192,7 @@ def parse_inner2(url):
             
         calcSUMS(params)
         sum_time_limit = get_str(sum_time_limit)
-        # print (Event, " ; ", Race)
-        # print (source_url)
-        # print (sum_distance , sum_elevation_gain , sum_descent , sum_refreshment_points, get_str(sum_time_limit))
+
     else:
         sum_distance = distance
         sum_elevation_gain = elevation_gain
@@ -235,7 +234,7 @@ def calcSUMS(params):
     session.max_redirects = 9999999
     dct = {}
     # url = url.strip('"')
-    page = session.get(url,headers=header, verify=False)
+    page = session.get(url,headers=headers, verify=False)
     soup = BeautifulSoup(page.content, "html.parser")
     All_info = soup.select("div#calevt_fich tr") #get_text(strip=True)
     lst_1 = []
@@ -299,10 +298,12 @@ def get_sec(time_str):
     if len(_lst) == 3:
         h, m, s = _lst
         return int(h) * 3600 + int(m) * 60 + int(s)
-    else:
+    elif len(_lst) == 2:
         h = 0
         m, s = _lst
         return int(h) * 3600 + int(m) * 60 + int(s)
+    else:
+        return 0
 
 
 def get_str(time_sec):
@@ -342,14 +343,14 @@ def number_of_pages(main_url):
 
     return nbpmax
 
-def parse_content(url):
+def parse_content(url, pageNo):
     lst = []
-    # url = "https://itra.run/calend.php?mode=getcal&num_page=&input_cal_rech=&ptsmin=0&ptsmax=6&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin={}&dtmax={}".format(dateMin, dateMax)
     session = requests.Session()
     session.max_redirects = 9999999
 
-    page = session.get(url, headers=headers, verify=False)
-    soup = BeautifulSoup(page.content, "html.parser")
+    page = requests.post(url, headers = headers, data = {'num_page': pageNo})
+
+    soup = BeautifulSoup(page.text, "html.parser")
     Params = soup.select("div.race a", href = True)
     for param in Params:
         params = eval(param["onclick"].split(";")[0])
@@ -357,14 +358,14 @@ def parse_content(url):
     return lst
   
 PAGE_URL = "https://itra.run/calend.php?mode=getcal&num_page={}&input_cal_rech=&ptsmin=0&ptsmax=6&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin={}&dtmax={}"
-NUMBER_OF_PAGES = 2# number_of_pages(PAGE_URL)
+NUMBER_OF_PAGES = number_of_pages(PAGE_URL)
 Data_list = []
 
 for page in range(1, NUMBER_OF_PAGES + 1):
     URLS = []
     url = PAGE_URL.format(page, dateMin, dateMax)
-    print ("Page ", page, " url ", url)
-    params = parse_content(url)
+    print ("Page ", page)
+    params = parse_content(url, page)
     for param in params:
         URLS += parse_inner(param)
     print ("  Scrapping {} URLS".format(len(URLS)))
