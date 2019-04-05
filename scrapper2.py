@@ -6,7 +6,7 @@ import re
 import json
 import time
 import datetime
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
                       '(KHTML, like Gecko) Chrome/65.0.3325.146 Safari/537.36',
@@ -60,7 +60,7 @@ def parse_inner2(url):
 
     try:
         registr_fee = lst_1[lst_1.index("Registration fees")+1]
-    except ValueError:
+    except:
         registr_fee = ""
 
     try:
@@ -313,9 +313,12 @@ def get_str(time_sec):
         return time.strftime('%M:%S', time.gmtime(time_sec))
 
 def reprDist(val):
-    retval = float(re.findall(r"[-+]?\d*\.\d+|\d+", val)[0])
-    unit = val.replace(re.findall(r"[-+]?\d*\.\d+|\d+", val)[0], "").strip()
-
+    try:
+        retval = float(re.findall(r"[-+]?\d*\.\d+|\d+", val)[0])
+        unit = val.replace(re.findall(r"[-+]?\d*\.\d+|\d+", val)[0], "").strip()
+    except:
+        retval = 0
+        unit = ""
     return retval, str(retval)+unit
 
 def parse_inner(lst_item):
@@ -368,7 +371,7 @@ for page in range(1, NUMBER_OF_PAGES + 1):
     params = parse_content(url, page)
     for param in params:
         URLS += parse_inner(param)
-    print ("  Scrapping {} URLS".format(len(URLS)))
+    print ("\tScrapping {} URLS\t".format(len(URLS)))
     
     for URL in URLS:
         Data_list.append(parse_inner2(URL))
