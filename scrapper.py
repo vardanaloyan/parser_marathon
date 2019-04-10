@@ -1,13 +1,9 @@
-"""
-Script made by Vardan Aloyan
-GMail: valoyan2@gmail.com
-"""
 import requests
 from bs4 import BeautifulSoup
 import urllib3
 import csv
 import re
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 header = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
@@ -73,7 +69,7 @@ def parse_content(url):
     reference_url = url
     dct["Reference URL"] = url
 
-    races = soup.select("div.mb-3")
+    races = soup.select("div.card-body div.mb-3")
     # print ("Len of Races: ", len(races), url)
 
     for num, race in enumerate(races):
@@ -81,8 +77,10 @@ def parse_content(url):
         attrs = [i.get_text().strip() for i in race.select("div.col")]
         Tags =  [i.get_text() for i in race.select("div.col span")]
         attrs = list(filter(lambda x: True if x != "" else False, attrs))
-        Races = race.select_one("h3").get_text().replace('[',"").replace(']',"")
-
+        try:
+            Races = race.select_one("h3").get_text().replace('[',"").replace(']',"")
+        except:
+            continue
         dct["Tag"] = str(Tags).replace('[',"").replace(']',"").replace("'","")  # attrs[-1]
     
         _lst = [i.strip() for i in attrs[0].split("-")]
@@ -103,16 +101,18 @@ def parse_content(url):
 fields = ["Event", "Race", "Country", "RegionString",  "Tag", "Date", "Starting Time", "Type", "Distance", "Starting Point", "Description", "Sign Up", "Reference URL", \
 "WEBSITE"]
 
-Lst = []
-for page in range(start_page, end_page):
-    links = parse_page("https://marathons.ahotu.com/calendar?page=%d" % page)
-    for link in links:
-        print ("Processing: %s" % link)
-        for dct in parse_content(link):
-            Lst.append(dct)
+# Lst = []
+# for page in range(start_page, end_page):
+#     links = parse_page("https://marathons.ahotu.com/calendar?page=%d" % page)
+#     for link in links:
+#         print ("Processing: %s" % link)
+#         for dct in parse_content(link):
+#             Lst.append(dct)
 
-with open('scrapped.csv', 'w', encoding="utf-8") as f:
-    writer = csv.DictWriter(f, fields)
-    writer.writeheader()
-    writer.writerows(Lst)
-    
+# with open('scrapped.csv', 'w', encoding="utf-8") as f:
+#     writer = csv.DictWriter(f, fields)
+#     writer.writeheader()
+#     writer.writerows(Lst)
+
+for dct in parse_content("https://marathons.ahotu.com//event/dead-sea-ultra-marathon"):
+    print (dct)
