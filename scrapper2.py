@@ -6,7 +6,7 @@ import re
 import json
 import time
 import datetime
-# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
                       '(KHTML, like Gecko) Chrome/65.0.3325.146 Safari/537.36',
@@ -39,8 +39,8 @@ def parse_inner2(url):
     soup = BeautifulSoup(page.content, "html.parser")
     Event = soup.select_one("div#calevt_titre").contents[-1].strip() 
     Race = soup.select_one("div#race-container h2").contents[-1].strip() #get_text(strip=True)
-    WEBSITE = soup.select_one("div#calevt_titre > div > a.web", href = True)
-    img_url = soup.select_one("div#im-container a", href = True)
+    WEBSITE = soup.select_one("div#calevt_titre > div > a.web") #, href = True
+    img_url = soup.select_one("div#im-container a") #, href = True
     All_info = soup.select("div#calevt_fich tr") #get_text(strip=True)
     lst_1 = []
     dct_2 = {}
@@ -53,8 +53,8 @@ def parse_inner2(url):
             dct_2[tds[0].get_text().strip()] = tds[1].get_text().strip()
         elif len(tds) == 1:
             if tds[0].get_text().strip() != "":
-                if tds[0].select_one("a", href = True) is not None:
-                    registr_url = tds[0].select_one("a", href = True)["href"]
+                if tds[0].select_one("a") is not None: #, href = True
+                    registr_url = tds[0].select_one("a")["href"] #, href = True
                 else:
                     lst_1.append(tds[0].get_text().strip())
 
@@ -115,7 +115,7 @@ def parse_inner2(url):
     
     source_url = url
     try:
-        course_url = soup.select_one("div#calevt_fich iframe", src = True)["src"]
+        course_url = soup.select_one("div#calevt_fich iframe")["src"] # , src = True
     except:
         course_url = ""
     try:
@@ -144,18 +144,20 @@ def parse_inner2(url):
         WEBSITE = ""
 
 
-    logo = soup.select_one("div#calevt_lst img", src = True)
+    logo = soup.select_one("div#calevt_lst img") #, src = True
     
     if logo is not None:
         logo_url = logo["src"]
     else:
         logo_url = ""
 
-    th = soup.select_one("div#calevt_fich tr th", onclick = True)
+    th = soup.select_one("div#calevt_fich tr th") #, onclick = True
 
     if th is not None:
-        stage = th.select_one("a.rightarr", onclick = True)
+        stage = th.select_one("a.rightarr") #, onclick = True
+        print("stage: ")
         params = eval(stage['onclick'].split(";")[0])
+        print (params)
         global sum_distance, sum_elevation_gain, sum_descent, sum_refreshment_points, sum_time_limit
 
         sum_distance = sum_elevation_gain = sum_descent = sum_refreshment_points = sum_time_limit = 0
@@ -246,8 +248,8 @@ def calcSUMS(params):
             dct_2[tds[0].get_text().strip()] = tds[1].get_text().strip()
         elif len(tds) == 1:
             if tds[0].get_text().strip() != "":
-                if tds[0].select_one("a", href = True) is not None:
-                    registr_url = tds[0].select_one("a", href = True)["href"]
+                if tds[0].select_one("a") is not None: #, href = True
+                    registr_url = tds[0].select_one("a")["href"] #, href = True
                 else:
                     lst_1.append(tds[0].get_text().strip())
 
@@ -282,11 +284,12 @@ def calcSUMS(params):
     sum_refreshment_points += reprDist(refreshment_points)[0]
     sum_time_limit += get_sec(time_limit)
 
-    th = soup.select_one("div#calevt_fich tr th", onclick = True)
+    th = soup.select_one("div#calevt_fich tr th") #, onclick = True
   
     if th is not None:
         try:
-            stage = th.select_one("a.rightarr", onclick = True)
+            stage = th.select_one("a.rightarr") #, onclick = True
+            print("stage: ", stage)
             params = eval(stage['onclick'].split(";")[0])
             calcSUMS(params)
         except:
@@ -329,7 +332,7 @@ def parse_inner(lst_item):
     soup = BeautifulSoup(page.content, "html.parser")
 
 
-    race_params =  [eval(i['onclick'].split(";")[0]) for i in soup.select("div#calevt_lst a", href = True)]
+    race_params =  [eval(i['onclick'].split(";")[0]) for i in soup.select("div#calevt_lst a")]  #, href = True
     for race_param in race_params:
         sub_url = "https://itra.run/calend.php?ide={0}&mode=getEvt&id={0}&annee={1}&idc={2}".format(*race_param)
         urls.append(sub_url)
@@ -354,7 +357,7 @@ def parse_content(url, pageNo):
     page = requests.post(url, headers = headers, data = {'num_page': pageNo})
 
     soup = BeautifulSoup(page.text, "html.parser")
-    Params = soup.select("div.race a", href = True)
+    Params = soup.select("div.race a") #, href = True
     for param in Params:
         params = eval(param["onclick"].split(";")[0])
         lst.append(params)
