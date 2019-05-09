@@ -6,7 +6,7 @@ import re
 import json
 import time
 import datetime
-# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 headers = {
         'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
                       '(KHTML, like Gecko) Chrome/65.0.3325.146 Safari/537.36',
@@ -152,8 +152,9 @@ def parse_inner2(url):
         logo_url = ""
 
     th = soup.select_one("div#calevt_fich tr th", onclick = True)
-
+    Stage = ""
     if th is not None:
+        Stage = th.get_text().split()[3]
         stage = th.select_one("a.rightarr", onclick = True)
         params = eval(stage['onclick'].split(";")[0])
         global sum_distance, sum_elevation_gain, sum_descent, sum_refreshment_points, sum_time_limit
@@ -202,6 +203,7 @@ def parse_inner2(url):
 
     dct["Event"]   = Event
     dct["Race"]    = Race
+    dct["stage"]   = Stage
     dct["Description"] = Description
     dct["Participants"] = participants 
     dct["Registration Opens"] = registr_open
@@ -228,7 +230,7 @@ def parse_inner2(url):
     return dct
 
 def calcSUMS(params):
-    global sum_distance, sum_elevation_gain, sum_descent, sum_refreshment_points, sum_time_limit
+    global sum_distance, sum_elevation_gain, sum_descent, sum_refreshment_points, sum_time_limit, stage
     url = "https://itra.run/calend.php?mode=getEvt&id={}&annee={}&idc={}&idx={}".format(*params)
     session = requests.Session()
     session.max_redirects = 9999999
@@ -287,6 +289,8 @@ def calcSUMS(params):
     if th is not None:
         try:
             stage = th.select_one("a.rightarr", onclick = True)
+            Stage = th.get_text().split()[3]
+
             params = eval(stage['onclick'].split(";")[0])
             calcSUMS(params)
         except:
@@ -361,7 +365,7 @@ def parse_content(url, pageNo):
     return lst
   
 PAGE_URL = "https://itra.run/calend.php?mode=getcal&num_page={}&input_cal_rech=&ptsmin=0&ptsmax=6&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin={}&dtmax={}"
-NUMBER_OF_PAGES = number_of_pages(PAGE_URL)
+NUMBER_OF_PAGES = 1#number_of_pages(PAGE_URL)
 Data_list = []
 
 for page in range(1, NUMBER_OF_PAGES + 1):
@@ -376,7 +380,7 @@ for page in range(1, NUMBER_OF_PAGES + 1):
     for URL in URLS:
         Data_list.append(parse_inner2(URL))
 
-fields = ['Event', 'Race', 'Description', 'Participants', 'Registration Opens', 'Registration Closes', 'Entry Fee', 'Sign Up', 'Date', 'Starting Time', 'Starting Point', 'Country', 'SumDistance', 'SumElevation Gain', 'SumDescent', 'SumRefreshment Points', 'SumTimeLimit', 'Website', 'CourseUrl', 'LogoPicURL', 'ProfilePicURL', 'SourceUrl']
+fields = ['Event', 'Race', 'Description', 'Participants', 'Registration Opens', 'Registration Closes', 'Entry Fee', 'Sign Up', 'Date', 'Starting Time', 'stage', 'Starting Point', 'Country', 'SumDistance', 'SumElevation Gain', 'SumDescent', 'SumRefreshment Points', 'SumTimeLimit', 'Website', 'CourseUrl', 'LogoPicURL', 'ProfilePicURL', 'SourceUrl']
 
 
 
