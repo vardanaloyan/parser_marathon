@@ -365,7 +365,7 @@ def parse_content(url, pageNo):
     return lst
   
 PAGE_URL = "https://itra.run/calend.php?mode=getcal&num_page={}&input_cal_rech=&ptsmin=0&ptsmax=6&montmin=0&montmax=14&finishmin=100&finishmax=600&periode=perso&dtmin={}&dtmax={}"
-NUMBER_OF_PAGES = 1#number_of_pages(PAGE_URL)
+NUMBER_OF_PAGES = number_of_pages(PAGE_URL)
 Data_list = []
 
 for page in range(1, NUMBER_OF_PAGES + 1):
