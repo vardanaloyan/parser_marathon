@@ -147,7 +147,7 @@ def parse_inner2(url):
     logo = soup.select_one("div#calevt_lst img", src = True)
     
     if logo is not None:
-        logo_url = logo["src"]
+        logo_url =  domain + logo["src"]
     else:
         logo_url = ""
 
